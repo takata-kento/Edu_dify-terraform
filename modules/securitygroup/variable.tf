@@ -16,12 +16,12 @@ variable "description" {
 variable "rules" {
   description = "The list of security group rules to create."
   type = list(object({
-    description = string
-    type        = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = optional(list(string))
+    description              = string
+    type                     = string
+    from_port                = number
+    to_port                  = number
+    protocol                 = string
+    cidr_blocks              = optional(list(string))
     source_security_group_id = optional(string)
   }))
 }
