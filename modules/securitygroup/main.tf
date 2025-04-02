@@ -2,7 +2,7 @@ resource "aws_security_group" "main" {
   name        = var.name
   description = var.description
   vpc_id      = var.vpc_id
-  tags        = { Name = "dify-api" }
+  tags        = { Name = var.name }
 }
 
 resource "aws_security_group_rule" "main" {
