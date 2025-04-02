@@ -632,13 +632,6 @@ module "dify_worker" {
           valueFrom = "${module.dify_secrets.secret_arn}:db_password::"
         }
       ]
-      healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
-        interval    = 10
-        timeout     = 5
-        retries     = 3
-        startPeriod = 30
-      }
       cpu         = 0
       volumesFrom = []
       mountPoints = []
