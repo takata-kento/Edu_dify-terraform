@@ -46,11 +46,11 @@ variable "container_definitions" {
       startPeriod = number
     }))
     mountPoints = optional(list(object({
-        sourceVolume  = string
-        containerPath = string
+      sourceVolume  = string
+      containerPath = string
     })))
-    entryPoint = optional(list(string))
-    command    = optional(list(string))
+    entryPoint  = optional(list(string))
+    command     = optional(list(string))
     cpu         = number
     volumesFrom = optional(list(string))
   }))
