@@ -17,7 +17,7 @@ resource "aws_ecs_task_definition" "main" {
     for_each = var.volume_name != null ? [var.volume_name] : []
 
     content {
-      name = volume.key
+      name = volume.value
     }
   }
 
