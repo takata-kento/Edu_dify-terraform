@@ -5,5 +5,6 @@ variable "name" {
 
 variable "secret_value" {
   description = "The value of the secret."
-  type        = string
+  # type        = string
+  type        = map(string)
 }

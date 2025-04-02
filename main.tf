@@ -4,6 +4,44 @@ data "aws_vpc" "current" {
 }
 
 ####################################################################################################
+# generate secret values
+
+resource "random_password" "redis_for_dify" {
+  length  = 24
+  special = false
+}
+
+resource "random_password" "postgres_for_dify" {
+  length  = 24
+  special = false
+}
+
+resource "random_password" "sandbox_key" {
+  length           = 42
+  special          = true
+  override_special = "%&-_=+:/"
+}
+
+resource "random_password" "session_secret_key" {
+  length           = 42
+  special          = true
+  override_special = "-_=+/"
+}
+
+module "dify_secrets" {
+  source = "./modules/secrets"
+
+  name         = "dify-secrets"
+  secret_value = {
+    redis_password  = random_password.redis_for_dify.result
+    db_password     = random_password.postgres_for_dify.result
+    sandbox_key     = random_password.sandbox_key.result
+    secret_key     = random_password.session_secret_key.result
+    redis_brokerurl = "redis://${resource.random_password.redis_for_dify.result}@${module.redis_for_dify.primary_endpoint_address}:6379/0"
+  }
+}
+
+####################################################################################################
 # S3 Bucket for Dify Storage
 
 resource "aws_s3_bucket" "main" {
@@ -39,31 +77,12 @@ module "sg_for_redis" {
   ]
 }
 
-resource "random_password" "redis_for_dify" {
-  length  = 24
-  special = false
-}
-
-module "secret_redis_password" {
-  source = "./modules/secrets"
-
-  name         = "dify-redis-password"
-  secret_value = random_password.redis_for_dify.result
-}
-
 module "redis_for_dify" {
   source = "./modules/redis"
 
   private_subnet_ids = var.private_subnet_ids
   security_group_ids = [module.sg_for_redis.security_group_id]
   redis_password     = random_password.redis_for_dify.result
-}
-
-module "secret_broker_url" {
-  source = "./modules/secrets"
-
-  name         = "dify-redis-broker-url"
-  secret_value = "redis://${resource.random_password.redis_for_dify.result}@${module.redis_for_dify.primary_endpoint_address}:6379/0"
 }
 
 ####################################################################################################
@@ -101,18 +120,6 @@ module "sg_for_postgres" {
       source_security_group_id = module.sg_for_worker.security_group_id
     }
   ]
-}
-
-resource "random_password" "postgres_for_dify" {
-  length  = 24
-  special = false
-}
-
-module "secret_db_password" {
-  source = "./modules/secrets"
-
-  name         = "dify-db-password-1"
-  secret_value = random_password.postgres_for_dify.result
 }
 
 module "postgres_for_dify" {
@@ -263,32 +270,6 @@ module "ecs_execution_role" {
 
 ####################################################################################################
 # ecs api task resources
-
-resource "random_password" "sandbox_key" {
-  length           = 42
-  special          = true
-  override_special = "%&-_=+:/"
-}
-
-resource "random_password" "session_secret_key" {
-  length           = 42
-  special          = true
-  override_special = "-_=+/"
-}
-
-module "secret_sandbox_key" {
-  source = "./modules/secrets"
-
-  name         = "dify-sandbox-key"
-  secret_value = random_password.sandbox_key.result
-}
-
-module "secret_session_key" {
-  source = "./modules/secrets"
-
-  name         = "dify-session-key"
-  secret_value = random_password.session_secret_key.result
-}
 
 module "ecs_api_task_role" {
   source = "./modules/service_role"
@@ -444,29 +425,29 @@ module "dify_api" {
       secrets = [
         {
           name      = "SECRET_KEY"
-          valueFrom = module.secret_session_key.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:secret_key::"
         },
         {
           name      = "DB_PASSWORD"
-          valueFrom = module.secret_db_password.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:db_password::"
         },
         {
           name      = "REDIS_PASSWORD"
-          valueFrom = module.secret_redis_password.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:redis_password::"
         },
         # The configurations of celery broker.
         # Use redis as the broker, and redis db 1 for celery broker.
         {
           name      = "CELERY_BROKER_URL"
-          valueFrom = module.secret_broker_url.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:redis_brokerurl::"
         },
         {
           name      = "PGVECTOR_PASSWORD"
-          valueFrom = module.secret_db_password.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:db_password::"
         },
         {
           name      = "CODE_EXECUTION_API_KEY"
-          valueFrom = module.secret_sandbox_key.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:sandbox_key::"
         }
       ]
       healthCheck = {
@@ -524,7 +505,7 @@ module "dify_api" {
       secrets = [
         {
           name      = "API_KEY"
-          valueFrom = module.secret_sandbox_key.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:sandbox_key::"
         }
       ]
       cpu         = 0
@@ -630,25 +611,25 @@ module "dify_worker" {
       secrets = [
         {
           name      = "SECRET_KEY"
-          valueFrom = module.secret_session_key.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:secret_key::"
         },
         {
           name      = "DB_PASSWORD"
-          valueFrom = module.secret_db_password.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:db_password::"
         },
         {
           name      = "REDIS_PASSWORD"
-          valueFrom = module.secret_redis_password.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:redis_password::"
         },
         # The configurations of celery broker.
         # Use redis as the broker, and redis db 1 for celery broker.
         {
           name      = "CELERY_BROKER_URL"
-          valueFrom = module.secret_broker_url.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:redis_brokerurl::"
         },
         {
           name      = "PGVECTOR_PASSWORD"
-          valueFrom = module.secret_db_password.secret_arn
+          valueFrom = "${module.dify_secrets.secret_arn}:db_password::"
         }
       ]
       healthCheck = {
