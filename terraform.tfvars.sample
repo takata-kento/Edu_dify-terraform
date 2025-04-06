@@ -1,0 +1,13 @@
+region = "ap-northeast-1"
+
+dify_storage_bucket = "dify-storage-bucket"
+
+vpc_id             = "your-own-vpc-id"
+private_subnet_ids = ["your-own-private_subnet-id"]
+public_subnet_ids  = ["your-own-public_subnet-id"]
+
+dify_api_version     = "value"
+dify_web_version     = "value"
+dify_sandbox_version = "value"
+
+allowed_cidr_blocks = ["0.0.0.0/0"]
